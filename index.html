@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Calculadora Ahorro DROPS — PDF</title>
+  <style>
+    :root{--bg:#000000;--card:#0b1220;--muted:#94a3b8;--accent:#4FC3F7;--glass:rgba(255,255,255,0.03)}
+    html,body{height:100%;margin:0;font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background:var(--bg);color:#e6eef6}
+    .wrap{max-width:980px;margin:28px auto;padding:20px;border-radius:12px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));box-shadow:0 8px 30px rgba(2,6,23,0.7)}
+    h1{margin:0 0 6px;font-size:20px}
+    p.lead{margin:0 0 18px;color:var(--muted)}
+    .grid{display:grid;grid-template-columns:1fr 380px;gap:18px}
+    .card{background:var(--card);padding:14px;border-radius:10px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.02)}
+    label{display:block;font-size:13px;margin-bottom:6px;color:var(--muted)}
+    input[type=number], input[type=text], select{width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:rgba(255,255,255,0.02);color:inherit;font-size:14px}
+    .row{display:flex;gap:8px}
+    .btn{display:inline-block;padding:8px 12px;border-radius:8px;background:var(--accent);color:#001218;cursor:pointer;border:none;font-weight:700}
+    .muted{color:var(--muted);font-size:13px}
+    table{width:100%;border-collapse:collapse;margin-top:8px}
+    th,td{padding:8px;text-align:left;border-bottom:1px dashed rgba(255,255,255,0.02);font-size:14px}
+    .small{font-size:13px}
+    .result{font-size:16px;font-weight:700}
+    .summary{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:12px;border-radius:8px}
+    .chart{height:160px;margin-top:12px}
+    .footer{margin-top:14px;color:var(--muted);font-size:13px}
+    .top-controls{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+    @media(max-width:920px){.grid{grid-template-columns:1fr;}.card{padding:12px}}
+    /* PDF-friendly report area styles (used when rendering) */
+    .report-title{font-size:20px;font-weight:700;color:#042031}
+    .report-sub{color:#15343a;margin-top:4px}
+    .report-body{display:flex;gap:16px;margin-top:12px}
+    .report-left{flex:1}
+    .report-right{width:220px}
+    .report-table{width:100%;border-collapse:collapse;margin-top:8px}
+    .report-table td{padding:6px;border-bottom:1px solid #e6eef6;color:#042031}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Calculadora de Ahorro — Sistema DROPS</h1>
+    <p class="lead">Rellena los datos, pulsa <strong>Calcular</strong> y luego <strong>Generar PDF</strong>.</p>
+
+    <div class="grid">
+      <div>
+        <div class="card">
+          <div class="top-controls">
+            <input id="clientName" type="text" placeholder="Nombre del cliente (ej. Juan Pérez)" style="flex:1;padding:8px;border-radius:8px">
+            <select id="profile">
+              <option value="home">Uso doméstico (familia)</option>
+              <option value="business">Uso profesional (oficina/negocio)</option>
+            </select>
+            <button class="btn" id="sampleBtn">Cargar ejemplo</button>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div>
+              <label>Personas que consumen agua</label>
+              <input id="people" type="number" min="1" step="1" value="4">
+            </div>
+            <div>
+              <label>Litros por persona/día</label>
+              <input id="litersPerPerson" type="number" min="0" step="0.1" value="2">
+            </div>
+            <div>
+              <label>Precio agua embotellada (€/L)</label>
+              <input id="priceBottled" type="number" min="0" step="0.01" value="0.40">
+            </div>
+            <div>
+              <label>Costes actuales filtros / anuales (€/año)</label>
+              <input id="currentFilters" type="number" min="0" step="1" value="0">
+            </div>
+            <div>
+              <label>Inversión inicial DROPS (€/unidad)</label>
+              <input id="invest" type="number" min="0" step="1" value="1199">
+            </div>
+            <div>
+              <label>Cuota DROPS (€/mes)</label>
+              <input id="monthly" type="number" min="0" step="0.01" value="30">
+            </div>
+            <div>
+              <label>Plazo de análisis (años)</label>
+              <input id="years" type="number" min="1" max="30" step="1" value="5">
+            </div>
+            <div>
+              <label>Incluye cafetera (reduce cuota?)</label>
+              <select id="coffeeIncluded"><option value="yes">Sí (descuento aplicado)</option><option value="no">No</option></select>
+            </div>
+          </div>
+
+          <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
+            <button class="btn" id="calc">Calcular</button>
+            <button class="btn" id="generatePdf">Generar PDF</button>
+            <button class="btn" id="download">Descargar HTML</button>
+          </div>
+
+        </div>
+
+        <div class="card" style="margin-top:12px">
+          <h3 style="margin:0 0 8px">Resultados</h3>
+          <table>
+            <tr><th>Consumo anual</th><td id="annualLiters" class="result">– L</td></tr>
+            <tr><th>Coste actual agua + filtros (€/año)</th><td id="currentCost" class="result">– €</td></tr>
+            <tr><th>Coste DROPS primer año (inv + cuota)</th><td id="dropsYear1" class="result">– €</td></tr>
+            <tr><th>Coste DROPS años siguientes (€/año)</th><td id="dropsAfter" class="result">– €</td></tr>
+            <tr><th>Ahorro estimado año 2+ (€/año)</th><td id="savingAfter" class="result">– €</td></tr>
+          </table>
+
+          <div class="summary" id="summaryBox">
+            <div id="amortization" class="muted">Punto de amortización: —</div>
+            <div id="cumulative" class="muted" style="margin-top:6px">Ahorro acumulado (hasta 5 años): —</div>
+            <div class="chart" id="chartArea"></div>
+          </div>
+        </div>
+
+      </div>
+
+      <div>
+        <div class="card">
+          <h3 style="margin-top:0">Informe listo para enviar</h3>
+          <p class="muted">Texto que puedes copiar y pegar al cliente. Incluye cifras clave y una recomendación.</p>
+          <pre id="report" style="white-space:pre-wrap;background:rgba(0,0,0,0.06);padding:10px;border-radius:8px;min-height:160px"></pre>
+
+          <div style="margin-top:10px">
+            <button class="btn" id="printBtn">Imprimir / Guardar PDF</button>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:12px">
+          <h4 style="margin:0">Notas y supuestos</h4>
+          <ul class="muted small">
+            <li>El cálculo considera solo agua para bebida y cocina (no lavado ni riego).</li>
+            <li>DROPS no produce rechazo y no consume electricidad según el fabricante.</li>
+            <li>Los costes reales variarán según consumo y precio de agua embotellada del cliente.</li>
+            <li>Usa el plazo elegido para ver ahorro acumulado y amortización.</li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="footer">Hecho con ❤️ — abre la página en cualquier navegador. Si quieres, te genero también la versión Excel/Google Sheets.</div>
+  </div>
+
+  <!-- Dependencies -->
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+
+<script>
+function fmt(n){return Number(n).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})}
+function calcAll(){
+  const people=Number(document.getElementById('people').value)||0;
+  const lpp=Number(document.getElementById('litersPerPerson').value)||0;
+  const priceB=Number(document.getElementById('priceBottled').value)||0;
+  const filters=Number(document.getElementById('currentFilters').value)||0;
+  const invest=Number(document.getElementById('invest').value)||0;
+  const monthly=Number(document.getElementById('monthly').value)||0;
+  const years=Number(document.getElementById('years').value)||5;
+
+  const annualLiters = people * lpp * 365;
+  const currentCost = annualLiters * priceB + filters;
+  const dropsYear1 = invest + monthly*12;
+  const dropsAfter = monthly*12;
+  const savingAfter = currentCost - dropsAfter;
+
+  document.getElementById('annualLiters').textContent = fmt(annualLiters) + ' L';
+  document.getElementById('currentCost').textContent = fmt(currentCost) + ' €';
+  document.getElementById('dropsYear1').textContent = fmt(dropsYear1) + ' €';
+  document.getElementById('dropsAfter').textContent = fmt(dropsAfter) + ' €';
+  document.getElementById('savingAfter').textContent = fmt(savingAfter) + ' €';
+
+  // amortization
+  let cum = -invest + (currentCost - dropsYear1);
+  let amortYear = null;
+  if(cum>=0) amortYear = 1;
+  else{
+    for(let y=2;y<=30;y++){
+      cum += (currentCost - dropsAfter);
+      if(cum>=0){amortYear=y;break}
+    }
+  }
+  document.getElementById('amortization').textContent = amortYear ? ('Punto de amortización aproximado: durante el año ' + amortYear) : 'Punto de amortización: >30 años (no amortiza en 30 años)';
+
+  const maxYears = Math.min(Math.max(years,1),30);
+  let cumul = -invest + (currentCost - dropsYear1);
+  const data = [{year:1,annualSaving:(currentCost-dropsYear1),cum:cumul}];
+  for(let y=2;y<=maxYears;y++){ cumul += (currentCost - dropsAfter); data.push({year:y,annualSaving:(currentCost-dropsAfter),cum:cumul}); }
+
+  document.getElementById('cumulative').textContent = 'Ahorro acumulado después de ' + maxYears + ' años: ' + fmt(cumul) + ' €';
+
+  drawChart(data,currentCost);
+
+  const clientName = document.getElementById('clientName').value || 'Cliente';
+  const report = `Estimado ${clientName}:\\n\\nConsumo estimado: ${fmt(annualLiters)} L/año.\\nCoste actual aproximado (agua embotellada + filtros): ${fmt(currentCost)} €/año.\\n\\nCoste con DROPS:\\n- Primer año (inversión + cuota): ${fmt(dropsYear1)} €.\\n- Años siguientes (cuota anual): ${fmt(dropsAfter)} €/año.\\n\\nAhorro estimado a partir del año 2: ${fmt(savingAfter)} €/año.\\n${amortYear?('Se estima que la inversión se recupera durante el año ' + amortYear + '.'):'No se recupera la inversión en los próximos 30 años con los datos actuales.'}\\n\\nAhorro acumulado en ` + maxYears + ` años: ${fmt(cumul)} €.\\n\\nRecomendación: si el cliente consume mucha agua embotellada o paga más por litro, el sistema DROPS suele amortizarse en pocos años y reduce residuos plásticos.\\n\\n`;
+  document.getElementById('report').textContent = report;
+  return {data,report,annualLiters,currentCost,dropsYear1,dropsAfter}
+}
+
+function drawChart(data,currentCost){
+  const area=document.getElementById('chartArea'); area.innerHTML='';
+  const w=340,h=150,pad=28;
+  const maxC=Math.max(...data.map(d=>Math.abs(d.cum)))||1;
+  const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.setAttribute('width',w);svg.setAttribute('height',h);
+  const stepX=(w-2*pad)/Math.max(1,data.length-1);
+  data.forEach(function(d,i){
+    const x=pad + i*stepX - 10;
+    const val = d.cum;
+    const yMid = h/2;
+    const barH = (Math.abs(val)/maxC)*(h/2 - 20);
+    const rect = document.createElementNS('http://www.w3.org/2000/svg','rect');
+    rect.setAttribute('x', x);
+    rect.setAttribute('y', val>=0 ? yMid - barH : yMid);
+    rect.setAttribute('width', 20);
+    rect.setAttribute('height', Math.max(2,barH));
+    rect.setAttribute('rx',4);
+    rect.setAttribute('fill', val>=0 ? '#06b6d4' : '#f97316');
+    svg.appendChild(rect);
+    const txt = document.createElementNS('http://www.w3.org/2000/svg','text');
+    txt.setAttribute('x', x+10); txt.setAttribute('y', yMid + (val>=0?-barH-8:barH+16)); txt.setAttribute('text-anchor','middle'); txt.setAttribute('font-size','11'); txt.setAttribute('fill','#cfeff6');
+    txt.textContent = (val>=0?'+':'') + Number(d.cum).toLocaleString('es-ES',{maximumFractionDigits:0});
+    svg.appendChild(txt);
+    const yr = document.createElementNS('http://www.w3.org/2000/svg','text'); yr.setAttribute('x', x+10); yr.setAttribute('y', h-4); yr.setAttribute('text-anchor','middle'); yr.setAttribute('font-size','11'); yr.setAttribute('fill','#94a3b8'); yr.textContent = d.year;
+    svg.appendChild(yr);
+  });
+  const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+  line.setAttribute('x1',pad-6); line.setAttribute('x2',w-pad+30); line.setAttribute('y1',h/2); line.setAttribute('y2',h/2); line.setAttribute('stroke','#102434'); line.setAttribute('stroke-width','2'); svg.appendChild(line);
+  area.appendChild(svg);
+}
+
+function sanitizeFilename(name){
+  return name.replace(/[^a-z0-9A-Z\\-\\_\\s\\.]/g,'').replace(/\\s+/g,'_');
+}
+
+// generate PDF (no logo included)
+document.getElementById('generatePdf').addEventListener('click', async function(){
+  calcAll();
+  const clientNameRaw = document.getElementById('clientName').value || 'Cliente';
+  const clientName = sanitizeFilename(clientNameRaw);
+  // build printable area
+  const printDiv = document.createElement('div');
+  printDiv.style.width = '800px';
+  printDiv.style.padding = '18px';
+  printDiv.style.background = '#ffffff';
+  printDiv.style.color = '#042031';
+  printDiv.style.borderRadius = '6px';
+
+  // header with title and blue line
+  const header = document.createElement('div');
+  header.style.display = 'flex'; header.style.flexDirection='column'; header.style.gap = '6px';
+  const hTitle = document.createElement('div'); hTitle.textContent = 'Ahorro y amortización con Drops'; hTitle.style.fontSize='20px'; hTitle.style.fontWeight='700'; hTitle.style.color='#042031';
+  const sub = document.createElement('div'); sub.textContent = clientNameRaw; sub.style.color='#15343a';
+  const blueLine = document.createElement('div'); blueLine.style.height='4px'; blueLine.style.width='140px'; blueLine.style.background='#4FC3F7'; blueLine.style.marginTop='6px';
+  header.appendChild(hTitle); header.appendChild(sub); header.appendChild(blueLine);
+  printDiv.appendChild(header);
+
+  const body = document.createElement('div'); body.style.display='flex'; body.style.gap='16px'; body.style.marginTop='12px';
+  const left = document.createElement('div'); left.style.flex='1';
+  const reportText = document.getElementById('report').cloneNode(true);
+  reportText.style.background='transparent'; reportText.style.color='#042031'; reportText.style.padding='0';
+  left.appendChild(reportText);
+
+  const table = document.createElement('table'); table.className='report-table';
+  const rows = [
+    ['Consumo anual', document.getElementById('annualLiters').textContent],
+    ['Coste actual (año)', document.getElementById('currentCost').textContent],
+    ['Coste DROPS primer año', document.getElementById('dropsYear1').textContent],
+    ['Coste DROPS años siguientes', document.getElementById('dropsAfter').textContent],
+    ['Ahorro estimado (año)', document.getElementById('savingAfter').textContent]
+  ];
+  rows.forEach(function(r){ const tr=document.createElement('tr'); const td1=document.createElement('td'); td1.textContent=r[0]; const td2=document.createElement('td'); td2.textContent=r[1]; tr.appendChild(td1); tr.appendChild(td2); table.appendChild(tr); });
+  left.appendChild(table);
+  body.appendChild(left);
+
+  const right = document.createElement('div'); right.style.width='260px';
+  const chart = document.getElementById('chartArea').cloneNode(true); chart.style.background='transparent';
+  right.appendChild(chart);
+  body.appendChild(right);
+
+  printDiv.appendChild(body);
+  document.body.appendChild(printDiv);
+  await new Promise(r=>setTimeout(r,150));
+  const canvas = await html2canvas(printDiv, {scale:2, backgroundColor: null});
+  const imgData = canvas.toDataURL('image/png');
+  document.body.removeChild(printDiv);
+
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF('p','mm','a4');
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+
+  // Title and blue line already inside screenshot; add small header area empty to align
+  const imgProps2 = pdf.getImageProperties(imgData);
+  const imgWidthMm = pageWidth - 30;
+  const imgHeightMm = (imgProps2.height/imgProps2.width)*imgWidthMm;
+  const marginTop = 15;
+  const availableHeight = pageHeight - marginTop - 20;
+  if(imgHeightMm > availableHeight){
+    const ratio = availableHeight / imgHeightMm;
+    pdf.addImage(imgData, 'PNG', 15, marginTop, imgWidthMm*ratio, imgHeightMm*ratio);
+  } else {
+    pdf.addImage(imgData, 'PNG', 15, marginTop, imgWidthMm, imgHeightMm);
+  }
+
+  const filename = 'Ahorro-y-Amortizacion-Drops_' + sanitizeFilename(clientName) + '.pdf';
+  pdf.save(filename);
+});
+
+document.getElementById('download').addEventListener('click',()=>{ const html = '<!doctype html>' + document.documentElement.innerHTML; const blob = new Blob([html],{type:'text/html'}); const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='calculadora-ahorro-drops.html'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); });
+
+document.getElementById('calc').addEventListener('click',()=>{ calcAll(); });
+document.getElementById('printBtn').addEventListener('click',()=>{ window.print(); });
+
+document.getElementById('sampleBtn').addEventListener('click',()=>{ 
+  const prof = document.getElementById('profile').value;
+  if(prof==='home'){ document.getElementById('people').value=4; document.getElementById('litersPerPerson').value=2; document.getElementById('priceBottled').value=0.40; document.getElementById('currentFilters').value=0; document.getElementById('invest').value=1199; document.getElementById('monthly').value=30; document.getElementById('years').value=5; }
+  else{ document.getElementById('people').value=25; document.getElementById('litersPerPerson').value=0.5; document.getElementById('priceBottled').value=0.40; document.getElementById('currentFilters').value=300; document.getElementById('invest').value=2499; document.getElementById('monthly').value=80; document.getElementById('years').value=5; }
+  calcAll();
+});
+
+calcAll();
+</script>
+</body>
+</html>
